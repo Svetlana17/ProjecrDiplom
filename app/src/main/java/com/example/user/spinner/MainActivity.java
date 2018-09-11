@@ -23,7 +23,8 @@ import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity  {
     private SensorManager mSensorManager;
-
+    Sensor sensorAccelerometr;
+    private double graph2LastXValue = 5d;
     String[] data = {"Ускорение по оси х", "Ускорение по оси y", "Ускорение по оси z"};
 
     ///* Called when the activity is first created. /
@@ -31,6 +32,9 @@ public class MainActivity extends AppCompatActivity  {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        sensorAccelerometr = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
 //
 //// адаптер
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, data);
@@ -54,6 +58,7 @@ public class MainActivity extends AppCompatActivity  {
             public void onNothingSelected(AdapterView<?> arg0) {
             }
         });
+        graph2LastXValue += 1d;
     }
 
 }
