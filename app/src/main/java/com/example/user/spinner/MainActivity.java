@@ -19,23 +19,48 @@ import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
 
 
-public class MainActivity extends AppCompatActivity  {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private SensorManager mSensorManager;
     Sensor sensorAccelerometr;
+    GraphView graph;
     private double graph2LastXValue = 5d;
+    private Double[] dataPoints;
+    private Thread thread;
+    private boolean plotData = true;
+    LineGraphSeries<DataPoint> series;
+    private boolean state;
     String[] data = {"Ускорение по оси х", "Ускорение по оси y", "Ускорение по оси z"};
-
+    private int timer=0;
     ///* Called when the activity is first created. /
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        state = false;
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         sensorAccelerometr = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
+
+
+        graph = (GraphView) findViewById(R.id.graph);
+        series = new LineGraphSeries<DataPoint>(new DataPoint[]{
+                new DataPoint(0, 0),
+        });
+        series.setColor(Color.GREEN);
+        graph.addSeries(series);
+
+
+        graph.getViewport().setXAxisBoundsManual(true);
+        graph.getViewport().setMinX(0);
+        graph.getViewport().setMaxX(20);
+        feedMultiple();
 //
+
 //// адаптер
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, data);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -59,6 +84,112 @@ public class MainActivity extends AppCompatActivity  {
             }
         });
         graph2LastXValue += 1d;
+    }
+
+    private void feedMultiple() {
+        if (thread != null) {
+            thread.interrupt();
+        }
+
+        thread = new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                while (true) {
+                    plotData = true;
+                    try {
+                        Thread.sleep(20);
+                    }
+                    catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        thread.start();
+    }
+
+    public void addEntry(SensorEvent event) {
+        /*     LineGraphSeries<DataPoint> series = new LineGraphSeries<>();*/
+        float[] values = event.values;
+        // Movement
+        float x = values[0];
+        System.out.println(x);
+        float y = values[1];
+        System.out.println(y);
+        float z = values[2];
+        System.out.println(z);
+
+        if (state) {
+            timer++;
+            if (timer % 5 == 0) {
+                System.out.println(timer);
+                // saveText(event);
+            }
+        }
+        graph2LastXValue += 1d;
+        series.appendData(new DataPoint(graph2LastXValue, x), true, 20);
+
+
+        graph.addSeries(series);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        if (thread != null) {
+            thread.interrupt();
+        }
+        mSensorManager.unregisterListener(this);
+
+    }
+
+    @Override
+    public void onSensorChanged(final SensorEvent event) {
+        if (plotData) {
+//            addEntry(event);
+            //
+            new Thread(new Runnable() {
+
+                @Override
+                public void run() {
+
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            addEntry(event);
+                        }
+                    });
+
+
+                }
+
+            }).start();
+
+            //
+            plotData = false;
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mSensorManager.registerListener(this, sensorAccelerometr, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    @Override
+    protected void onDestroy() {
+        mSensorManager.unregisterListener(MainActivity.this);
+        thread.interrupt();
+        super.onDestroy();
     }
 
 }
